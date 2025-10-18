@@ -1,0 +1,77 @@
+# Import library
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set(style="whitegrid")
+
+# =========================
+# 1. Buat dataset mahasiswa ringkas
+# =========================
+data = {
+    'Mahasiswa': ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10'],
+    'SKS': [20,18,22,15,19,21,17,16,23,14],
+    'IPK': [3.5,3.0,3.8,2.8,3.2,3.6,3.1,2.9,3.9,2.7],
+    'Jam_Ekstra': [5,2,8,1,4,6,3,2,9,1],
+    'Kehadiran': [90,80,95,70,85,92,78,75,98,65]
+}
+
+df = pd.DataFrame(data)
+X = df[['SKS','IPK','Jam_Ekstra','Kehadiran']]
+
+# =========================
+# 2. Standarisasi data
+# =========================
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# =========================
+# 3. Coba K-Means dengan K=2,3,4 dan catat Silhouette
+# =========================
+k_values = [2, 3, 4]
+sil_scores = []
+
+for k in k_values:
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(X_scaled)
+    sil = silhouette_score(X_scaled, labels)
+    sil_scores.append(sil)
+    print(f"K={k}, Silhouette Score={sil:.2f}")
+
+# =========================
+# 4. Pilih K terbaik (misal K=3) dan lakukan clustering
+# =========================
+best_k = 3
+kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+df['Cluster'] = kmeans.fit_predict(X_scaled)
+
+# =========================
+# 5. Visualisasi hasil clustering dengan PCA 2D
+# =========================
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+df['PC1'] = X_pca[:,0]
+df['PC2'] = X_pca[:,1]
+
+plt.figure(figsize=(8,6))
+sns.scatterplot(x='PC1', y='PC2', hue='Cluster', data=df, palette='Set2', s=100)
+for i in range(df.shape[0]):
+    plt.text(df['PC1'][i]+0.02, df['PC2'][i]+0.02, df['Mahasiswa'][i], fontsize=9)
+plt.title(f"K-Means Clustering Mahasiswa (K={best_k}) dengan PCA 2D")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.legend(title='Cluster')
+plt.show()
+
+# =========================
+# 6. Interpretasi sederhana tiap cluster
+# =========================
+for c in range(best_k):
+    cluster_data = df[df['Cluster']==c]
+    print(f"\nCluster {c}:")
+    print(cluster_data.describe())
